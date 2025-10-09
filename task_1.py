@@ -9,22 +9,25 @@ class BloomFilter:
 
     def add(self, item):
         for i in range(self.num_hashes):
-            index = mmh3.hash(item.encode("utf-8"), i) % self.size
+            index = mmh3.hash(item, i) % self.size
             self.bit_array[index] = 1
 
     def contains(self, item):
         for i in range(self.num_hashes):
-            index = mmh3.hash(item.encode("utf-8"), i) % self.size
+            index = mmh3.hash(item, i) % self.size
             if self.bit_array[index] == 0:
                 return False
         return True
 
 
-def check_password_uniqueness(bloom, password):
-    if bloom.contains(password):
-        return "Пароль вже існує"
-    else:
-        return "Пароль унікальний"
+def check_password_uniqueness(bloom, passwords):
+    results = {}
+    for password in passwords:
+        if bloom.contains(password):
+            results[password] = "already exists"
+        else:
+            results[password] = "not exists"
+    return results
 
 
 if __name__ == "__main__":
