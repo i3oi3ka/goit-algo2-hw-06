@@ -24,9 +24,9 @@ def check_password_uniqueness(bloom, passwords):
     results = {}
     for password in passwords:
         if bloom.contains(password):
-            results[password] = "already exists"
+            results[password] = "вже використаний"
         else:
-            results[password] = "not exists"
+            results[password] = "унікальний"
     return results
 
 
