@@ -1,4 +1,7 @@
 import json
+from datasketch import HyperLogLog
+
+hll = HyperLogLog(p=14)
 
 
 def unique_ip_address(path):
@@ -15,8 +18,15 @@ def unique_ip_address(path):
 
                 except json.JSONDecodeError:
                     print(f"Skipping malformed JSON line: {line[:60]}...")
-    return set(remote_addrs)
+    return remote_addrs
 
 
 remote_ip_address = unique_ip_address("lms-stage-access.log")
-print(remote_ip_address)
+
+
+for data in remote_ip_address:
+    hll.update(data.encode("utf-8"))
+
+# Оцінка кількості унікальних елементів
+print(f"Реальна кількість унікальних елементів: {len(set(remote_ip_address))}")
+print(f"Оцінена кількість унікальних елементів: {hll.count()}")
