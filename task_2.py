@@ -25,10 +25,10 @@ def unique_ip_address(path):
 remote_ip_address = unique_ip_address("lms-stage-access.log")
 
 set_ip = set()
-time_start = datetime.now()
+time_start = datetime.now().second
 for data in remote_ip_address:
     set_ip.add(data)
-time_result = datetime.now() - time_start
+time_result = datetime.now().second - time_start
 
 
 print(f"Реальна кількість унікальних елементів: {len(set_ip)}, time: {time_result}")
