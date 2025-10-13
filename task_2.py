@@ -2,13 +2,14 @@ import json
 import time
 from datasketch import HyperLogLog
 
-hll = HyperLogLog(p=14)
+
+LOG_FILE = "lms-stage-access.log"
 
 
-def count_unique_ip_address_set(path):
+def count_unique_ip_address_set(path: str) -> int | None:
     unique_ip = set()
     try:
-        with open(path, "rb") as file:
+        with open(path, "r", encoding="utf-8") as file:
             for line in file:
                 line = line.strip()
                 if line:
@@ -18,7 +19,7 @@ def count_unique_ip_address_set(path):
                         if remote_address:
                             unique_ip.add(remote_address)
                     except json.JSONDecodeError:
-                        return None
+                        pass
 
     except FileNotFoundError:
         print(f"Error: The file at {path} was not found.")
@@ -27,9 +28,10 @@ def count_unique_ip_address_set(path):
     return len(unique_ip)
 
 
-def count_unique_ip_address_hyper_log(path):
+def count_unique_ip_address_hyper_log(path: str) -> int | None:
+    hll = HyperLogLog(p=14)
     try:
-        with open(path, "rb") as file:
+        with open(path, "r", encoding="utf-8") as file:
             for line in file:
                 line = line.strip()
                 if line:
@@ -39,24 +41,24 @@ def count_unique_ip_address_hyper_log(path):
                         if remote_address:
                             hll.update(remote_address.encode("utf-8"))
                     except json.JSONDecodeError:
-                        return None
+                        pass
 
     except FileNotFoundError:
         print(f"Error: The file at {path} was not found.")
         return None
 
-    return hll.count()
+    return int(hll.count())
 
 
 # --- Method 1: Exact counting with a set ---
 time_start = time.perf_counter()
-exact_count = count_unique_ip_address_set("lms-stage-access.log")
+exact_count = count_unique_ip_address_set(LOG_FILE)
 set_duration = time.perf_counter() - time_start
 
 
 # --- Method 2: Estimated counting with HyperLogLog ---
 time_start = time.perf_counter()
-hll_count = count_unique_ip_address_hyper_log("lms-stage-access.log")
+hll_count = count_unique_ip_address_hyper_log(LOG_FILE)
 hll_duration = time.perf_counter() - time_start
 
 error = (abs(exact_count - hll_count) / exact_count) * 100 if exact_count > 0 else 0
@@ -68,5 +70,5 @@ print(f"| {'Кількість унікальних IP':<25} | {exact_count:<25}
 print(
     f"| {'Час виконання (сек)':<25} | {set_duration:<25.6f} | {hll_duration:<25.6f} |"
 )
-print(f"| {'Похибка (%)':<25} | {'0.0 %':<25} | {f'{error:.2f} %':<25} |")
+print(f"| {'Похибка (%)':<25} | {'0.00 %':<25} | {f'{error:.2f} %':<25} |")
 print("-" * 85)
