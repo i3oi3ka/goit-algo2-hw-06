@@ -17,11 +17,8 @@ def count_unique_ip_address_set(path):
                         remote_address = log_entry.get("remote_addr")
                         if remote_address:
                             unique_ip.add(remote_address)
-                    # THIS IS THE MISSING BLOCK
                     except json.JSONDecodeError:
-                        # You can print a warning here or just ignore the bad line
-                        # print(f"Warning: Could not parse line: {line}")
-                        pass  # Silently ignore lines that cannot be parsed
+                        return None
 
     except FileNotFoundError:
         print(f"Error: The file at {path} was not found.")
@@ -41,9 +38,8 @@ def count_unique_ip_address_hyper_log(path):
                         remote_address = log_entry.get("remote_addr")
                         if remote_address:
                             hll.update(remote_address.encode("utf-8"))
-                    # THIS IS THE MISSING BLOCK
                     except json.JSONDecodeError:
-                        pass
+                        return None
 
     except FileNotFoundError:
         print(f"Error: The file at {path} was not found.")
