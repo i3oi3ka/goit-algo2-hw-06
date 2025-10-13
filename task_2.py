@@ -1,41 +1,76 @@
 import json
-from datetime import datetime
+import time
 from datasketch import HyperLogLog
 
 hll = HyperLogLog(p=14)
 
 
-def unique_ip_address(path):
-    remote_addrs = []
-    with open(path, "rb") as file:
-        for line in file:
-            line = line.strip()
-            if line:
-                try:
-                    log_entry = json.loads(line)
-                    remote_address = log_entry.get("remote_addr")
-                    if remote_address:
-                        remote_addrs.append(remote_address)
+def count_unique_ip_address_set(path):
+    unique_ip = set()
+    try:
+        with open(path, "rb") as file:
+            for line in file:
+                line = line.strip()
+                if line:
+                    try:
+                        log_entry = json.loads(line)
+                        remote_address = log_entry.get("remote_addr")
+                        if remote_address:
+                            unique_ip.add(remote_address)
+                    # THIS IS THE MISSING BLOCK
+                    except json.JSONDecodeError:
+                        # You can print a warning here or just ignore the bad line
+                        # print(f"Warning: Could not parse line: {line}")
+                        pass  # Silently ignore lines that cannot be parsed
 
-                except json.JSONDecodeError:
-                    print(f"Skipping malformed JSON line: {line[:60]}...")
-    return remote_addrs
+    except FileNotFoundError:
+        print(f"Error: The file at {path} was not found.")
+        return None
+
+    return len(unique_ip)
 
 
-remote_ip_address = unique_ip_address("lms-stage-access.log")
+def count_unique_ip_address_hyper_log(path):
+    try:
+        with open(path, "rb") as file:
+            for line in file:
+                line = line.strip()
+                if line:
+                    try:
+                        log_entry = json.loads(line)
+                        remote_address = log_entry.get("remote_addr")
+                        if remote_address:
+                            hll.update(remote_address.encode("utf-8"))
+                    # THIS IS THE MISSING BLOCK
+                    except json.JSONDecodeError:
+                        pass
 
-set_ip = set()
-time_start = datetime.now().second
-for data in remote_ip_address:
-    set_ip.add(data)
-time_result = datetime.now().second - time_start
+    except FileNotFoundError:
+        print(f"Error: The file at {path} was not found.")
+        return None
+
+    return hll.count()
 
 
-print(f"Реальна кількість унікальних елементів: {len(set_ip)}, time: {time_result}")
-time_start = datetime.now()
-for data in remote_ip_address:
-    hll.update(data.encode("utf-8"))
-time_result = datetime.now() - time_start
-# Оцінка кількості унікальних елементів
+# --- Method 1: Exact counting with a set ---
+time_start = time.perf_counter()
+exact_count = count_unique_ip_address_set("lms-stage-access.log")
+set_duration = time.perf_counter() - time_start
 
-print(f"Оцінена кількість унікальних елементів: {hll.count()}, time: {time_result}")
+
+# --- Method 2: Estimated counting with HyperLogLog ---
+time_start = time.perf_counter()
+hll_count = count_unique_ip_address_hyper_log("lms-stage-access.log")
+hll_duration = time.perf_counter() - time_start
+
+error = (abs(exact_count - hll_count) / exact_count) * 100 if exact_count > 0 else 0
+
+print("\n--- Результати порівняння ---")
+print(f"| {'Метрика':<25} | {'Точний підрахунок (Set)':<25} | {'HyperLogLog':<25} |")
+print(f"|{'-'*27}|{'-'*27}|{'-'*27}|")
+print(f"| {'Кількість унікальних IP':<25} | {exact_count:<25} | {hll_count:<25} |")
+print(
+    f"| {'Час виконання (сек)':<25} | {set_duration:<25.6f} | {hll_duration:<25.6f} |"
+)
+print(f"| {'Похибка (%)':<25} | {'0.0 %':<25} | {f'{error:.2f} %':<25} |")
+print("-" * 85)
